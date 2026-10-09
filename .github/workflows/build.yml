@@ -13,10 +13,9 @@ jobs:
 build:
 name: Compile AfterDeath
 runs-on: ubuntu-latest
-
 steps:
-  - name: Checkout source code
-    uses: actions/checkout@v4
+- name: Checkout source code
+uses: actions/checkout@v4
 
   - name: Set up Java 21
     uses: actions/setup-java@v4
