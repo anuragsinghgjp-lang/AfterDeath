@@ -10,8 +10,6 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.Skull;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
@@ -70,6 +68,10 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         saveEliminated();
     }
 
+    // --------------------------------------------------
+    // DATA STORAGE
+    // --------------------------------------------------
+
     private void loadEliminated() {
         eliminated.clear();
 
@@ -91,8 +93,84 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         saveConfig();
     }
 
+    private String serialize(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+
+        return location.getWorld().getName() + ","
+                + location.getX() + ","
+                + location.getY() + ","
+                + location.getZ() + ","
+                + location.getYaw() + ","
+                + location.getPitch();
+    }
+
+    private Location deserialize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            String[] parts = value.split(",");
+
+            if (parts.length < 4) {
+                return null;
+            }
+
+            World world = Bukkit.getWorld(parts[0]);
+
+            if (world == null) {
+                return null;
+            }
+
+            double x = Double.parseDouble(parts[1]);
+            double y = Double.parseDouble(parts[2]);
+            double z = Double.parseDouble(parts[3]);
+
+            float yaw = parts.length > 4
+                    ? Float.parseFloat(parts[4]) : 0.0f;
+
+            float pitch = parts.length > 5
+                    ? Float.parseFloat(parts[5]) : 0.0f;
+
+            return new Location(world, x, y, z, yaw, pitch);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private int[] parsePos(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            String[] parts = value.split(",");
+
+            if (parts.length != 3) {
+                return null;
+            }
+
+            return new int[]{
+                    Integer.parseInt(parts[0].trim()),
+                    Integer.parseInt(parts[1].trim()),
+                    Integer.parseInt(parts[2].trim())
+            };
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    // --------------------------------------------------
+    // MESSAGES AND PERMISSIONS
+    // --------------------------------------------------
+
     private String color(String text) {
-        return ChatColor.translateAlternateColorCodes('&', text == null ? "" : text);
+        return ChatColor.translateAlternateColorCodes(
+                '&',
+                text == null ? "" : text
+        );
     }
 
     private void message(CommandSender sender, String text) {
@@ -134,6 +212,100 @@ public final class AfterDeath extends JavaPlugin implements Listener {
     private boolean isHeadstealWorld(World world) {
         return world != null
                 && world.getName().equalsIgnoreCase(headstealWorldName());
+    }
+
+    // --------------------------------------------------
+    // SPAWN AND BAN BOX LOCATIONS
+    // --------------------------------------------------
+
+    private Location getHeadstealSpawn(World world) {
+        if (world == null) {
+            return null;
+        }
+
+        Location configured = deserialize(
+                getConfig().getString("headsteal-spawn")
+        );
+
+        if (configured != null
+                && configured.getWorld() != null
+                && configured.getWorld().getName().equalsIgnoreCase(
+                        world.getName())) {
+            return configured;
+        }
+
+        return world.getSpawnLocation();
+    }
+
+    private Location getBoxCenter() {
+        String name = getConfig().getString("ban-box.name", "main");
+        String path = "ban-boxes." + name;
+
+        String worldName = getConfig().getString(path + ".world");
+        String pos1 = getConfig().getString(path + ".pos1");
+        String pos2 = getConfig().getString(path + ".pos2");
+
+        if (worldName == null || pos1 == null || pos2 == null) {
+            worldName = getConfig().getString("ban-box.world");
+            pos1 = getConfig().getString("ban-box.pos1");
+            pos2 = getConfig().getString("ban-box.pos2");
+        }
+
+        if (worldName == null || pos1 == null || pos2 == null) {
+            return null;
+        }
+
+        World world = Bukkit.getWorld(worldName);
+        int[] p1 = parsePos(pos1);
+        int[] p2 = parsePos(pos2);
+
+        if (world == null || p1 == null || p2 == null) {
+            return null;
+        }
+
+        double x = (p1[0] + p2[0]) / 2.0 + 0.5;
+        double y = Math.min(p1[1], p2[1]) + 1.0;
+        double z = (p1[2] + p2[2]) / 2.0 + 0.5;
+
+        return new Location(world, x, y, z);
+    }
+
+    private boolean isInsideBanBox(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+
+        String name = getConfig().getString("ban-box.name", "main");
+        String path = "ban-boxes." + name;
+
+        String worldName = getConfig().getString(path + ".world");
+        String pos1 = getConfig().getString(path + ".pos1");
+        String pos2 = getConfig().getString(path + ".pos2");
+
+        if (worldName == null || pos1 == null || pos2 == null) {
+            worldName = getConfig().getString("ban-box.world");
+            pos1 = getConfig().getString("ban-box.pos1");
+            pos2 = getConfig().getString("ban-box.pos2");
+        }
+
+        if (worldName == null || pos1 == null || pos2 == null
+                || !location.getWorld().getName().equalsIgnoreCase(worldName)) {
+            return false;
+        }
+
+        int[] p1 = parsePos(pos1);
+        int[] p2 = parsePos(pos2);
+
+        if (p1 == null || p2 == null) {
+            return false;
+        }
+
+        return location.getBlockX() >= Math.min(p1[0], p2[0])
+                && location.getBlockX() <= Math.max(p1[0], p2[0])
+                && location.getBlockY() >= Math.min(p1[1], p2[1])
+                && location.getBlockY() <= Math.max(p1[1], p2[1]) + 2
+                && location.getBlockZ() >= Math.min(p1[2], p2[2])
+                && location.getBlockZ() <= Math.max(p1[2], p2[2]);
     }
 
     // --------------------------------------------------
@@ -204,7 +376,6 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 );
 
                 saveConfig();
-
                 configMessage(sender, "spawn-set");
             }
 
@@ -236,29 +407,32 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 saveEliminated();
 
                 Player target = Bukkit.getPlayer(targetId);
+                World world = Bukkit.getWorld(headstealWorldName());
 
                 if (target != null) {
                     clearPendingRevive(targetId);
 
-                    Location destination = getHeadstealSpawn(
-                            Bukkit.getWorld(headstealWorldName())
-                    );
+                    Location destination = getHeadstealSpawn(world);
+
+                    if (destination == null) {
+                        destination = target.getWorld().getSpawnLocation();
+                    }
 
                     revivePlayer(target, destination);
                 } else {
-                    World world = Bukkit.getWorld(headstealWorldName());
+                    Location destination = getHeadstealSpawn(world);
 
-                    if (world != null) {
+                    if (destination != null) {
                         getConfig().set(
                                 "pending-revives." + targetId,
-                                serialize(getHeadstealSpawn(world))
+                                serialize(destination)
                         );
-
                         saveConfig();
                     }
                 }
 
-                message(sender, "&aPlayer &e" + args[1] + " &ahas been revived.");
+                message(sender, "&aPlayer &e" + args[1]
+                        + " &ahas been revived.");
             }
 
             case "status" -> {
@@ -290,6 +464,10 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                         + "revive <player>, status <player>");
         message(sender, "&e/bb wand, set <name>, delete <name>");
     }
+
+    // --------------------------------------------------
+    // BAN BOX WAND
+    // --------------------------------------------------
 
     private void giveWand(Player player) {
         ItemStack wand = new ItemStack(Material.BLAZE_ROD);
@@ -369,16 +547,19 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 }
 
                 String name = args[1].toLowerCase();
+                String path = "ban-boxes." + name;
 
-                getConfig().set("ban-boxes." + name + ".world", worldName);
-                getConfig().set("ban-boxes." + name + ".pos1",
-                        p1[0] + "," + p1[1] + "," + p1[2]);
-                getConfig().set("ban-boxes." + name + ".pos2",
-                        p2[0] + "," + p2[1] + "," + p2[2]);
+                getConfig().set(path + ".world", worldName);
+                getConfig().set(
+                        path + ".pos1",
+                        p1[0] + "," + p1[1] + "," + p1[2]
+                );
+                getConfig().set(
+                        path + ".pos2",
+                        p2[0] + "," + p2[1] + "," + p2[2]
+                );
 
-                // All eliminated players share this active box.
                 getConfig().set("ban-box.name", name);
-
                 saveConfig();
 
                 message(sender, "&aBan Box '&e" + name
@@ -461,191 +642,4 @@ public final class AfterDeath extends JavaPlugin implements Listener {
             return;
         }
 
-        String oldWorld = getConfig().getString("ban-box.world", "");
-
-        if (!oldWorld.isBlank()
-                && !oldWorld.equalsIgnoreCase(block.getWorld().getName())) {
-            getConfig().set("ban-box.pos1", null);
-            getConfig().set("ban-box.pos2", null);
-        }
-
-        getConfig().set("ban-box.world", block.getWorld().getName());
-
-        getConfig().set(
-                "ban-box." + position,
-                block.getX() + "," + block.getY() + "," + block.getZ()
-        );
-
-        saveConfig();
-
-        message(player, "&a" + position + " set to &e"
-                + block.getX() + ", "
-                + block.getY() + ", "
-                + block.getZ());
-    }
-
-    // --------------------------------------------------
-    // PLAYER DEATH AND HEADSTEAL
-    // --------------------------------------------------
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerDeath(PlayerDeathEvent event) {
-        Player victim = event.getEntity();
-        Player killer = victim.getKiller();
-
-        if (!isHeadstealWorld(victim.getWorld())) return;
-        if (killer == null) return;
-        if (eliminated.contains(victim.getUniqueId())) return;
-
-        UUID victimId = victim.getUniqueId();
-
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-
-        meta.setOwningPlayer(victim);
-        meta.setDisplayName(color("&c&l" + victim.getName() + "'s Head"));
-
-        meta.setLore(List.of(
-                color("&7Place this head to revive its owner."),
-                color("&8AfterDeath")
-        ));
-
-        meta.getPersistentDataContainer().set(
-                headKey,
-                PersistentDataType.STRING,
-                victimId.toString()
-        );
-
-        head.setItemMeta(meta);
-
-        event.getDrops().removeIf(
-                item -> item.getType() == Material.PLAYER_HEAD
-        );
-
-        event.getDrops().add(head);
-
-        eliminated.add(victimId);
-        saveEliminated();
-
-        message(killer, "&e" + victim.getName() + "'s head has dropped!");
-        message(victim, "&cYou have been eliminated. Your head is required for revival.");
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onRespawn(PlayerRespawnEvent event) {
-        Player player = event.getPlayer();
-
-        if (!eliminated.contains(player.getUniqueId())) return;
-        if (!isHeadstealWorld(player.getWorld())) return;
-
-        Location box = getBoxCenter();
-
-        if (box != null) {
-            event.setRespawnLocation(box);
-        } else {
-            event.setRespawnLocation(
-                    getHeadstealSpawn(player.getWorld())
-            );
-        }
-    }
-
-    // --------------------------------------------------
-    // REVIVAL BY PLACING A PLAYER HEAD
-    // --------------------------------------------------
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onHeadPlace(BlockPlaceEvent event) {
-        ItemStack item = event.getItemInHand();
-
-        if (!item.hasItemMeta()) return;
-
-        String targetString = item.getItemMeta()
-                .getPersistentDataContainer()
-                .get(headKey, PersistentDataType.STRING);
-
-        if (targetString == null) return;
-
-        if (!isHeadstealWorld(event.getBlockPlaced().getWorld())) {
-            event.setCancelled(true);
-            message(event.getPlayer(), "&cThis head must be placed in the Headsteal world.");
-            return;
-        }
-
-        UUID targetId;
-
-        try {
-            targetId = UUID.fromString(targetString);
-        } catch (IllegalArgumentException ex) {
-            event.setCancelled(true);
-            return;
-        }
-
-        if (!eliminated.contains(targetId)) {
-            event.setCancelled(true);
-            message(event.getPlayer(), "&cThis player has already been revived.");
-            return;
-        }
-
-        Location destination = event.getBlockPlaced()
-                .getLocation()
-                .add(0.5, 1.0, 0.5);
-
-        eliminated.remove(targetId);
-        saveEliminated();
-
-        Player target = Bukkit.getPlayer(targetId);
-
-        if (target != null) {
-            clearPendingRevive(targetId);
-
-            Bukkit.getScheduler().runTask(this, () -> {
-                if (!target.isOnline()) return;
-
-                revivePlayer(target, destination);
-            });
-        } else {
-            getConfig().set(
-                    "pending-revives." + targetId,
-                    serialize(destination)
-            );
-
-            saveConfig();
-        }
-
-        message(event.getPlayer(), "&aHead placed! Player revived.");
-    }
-
-    private void revivePlayer(Player player, Location destination) {
-        if (destination == null || destination.getWorld() == null) {
-            destination = player.getWorld().getSpawnLocation();
-        }
-
-        player.teleport(destination);
-        player.setHealth(Math.min(
-                player.getMaxHealth(),
-                getConfig().getDouble("revival.health", 20.0)
-        ));
-        player.setFoodLevel(
-                getConfig().getInt("revival.food-level", 20)
-        );
-        player.setFireTicks(0);
-        player.setFallDistance(0);
-
-        if (getConfig().getBoolean("revival.play-totem-effect", true)) {
-            player.playEffect(org.bukkit.EntityEffect.TOTEM_RESURRECT);
-        }
-
-        if (getConfig().getBoolean("revival.play-particles", true)) {
-            player.getWorld().spawnParticle(
-                    Particle.TOTEM_OF_UNDYING,
-                    player.getLocation().add(0, 1, 0),
-                     50,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.1
-            );
-        }
-    }
-}
-          
+   
