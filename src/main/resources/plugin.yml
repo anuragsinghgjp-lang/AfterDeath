@@ -1,18 +1,25 @@
 name: AfterDeath
-version: '${version}'
+version: '1.1.0'
 main: com.afterdeath.AfterDeath
 api-version: '1.21'
 author: AfterDeath
-description: Custom PvP head-drop, elimination and Ban Box plugin.
+description: Headsteal, player revival and Ban Box plugin with Multiverse support.
+
 commands:
-  afterdeath:
-    description: Main AfterDeath command.
-    usage: /afterdeath <wand|setworld|setspawn|reload|revive|status>
-    aliases: [ad]
+afterdeath:
+description: Main AfterDeath command.
+usage: /afterdeath <wand|setworld|setspawn|reload|revive|status>
+aliases: [ad]
+
+bb:
+description: Ban Box management commands.
+usage: /bb <wand|set <name>|delete <name>>
+
 permissions:
-  afterdeath.admin:
-    description: Allows configuring AfterDeath and using admin commands.
-    default: op
-  afterdeath.bypass:
-    description: Bypasses AfterDeath elimination restrictions.
-    default: false
+afterdeath.admin:
+description: Allows configuring AfterDeath and using admin commands.
+default: op
+
+afterdeath.bypass:
+description: Bypasses AfterDeath elimination restrictions.
+default: false
