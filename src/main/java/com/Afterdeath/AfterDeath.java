@@ -1,3 +1,4 @@
+
 package com.afterdeath;
 
 import org.bukkit.Bukkit;
@@ -57,7 +58,6 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         headKey = new NamespacedKey(this, "eliminated_player");
 
         loadEliminated();
-
         Bukkit.getPluginManager().registerEvents(this, this);
 
         getLogger().info("AfterDeath enabled.");
@@ -121,20 +121,22 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         }
 
         try {
-            String[] p = value.split(",");
-            if (p.length < 4) return null;
+            String[] parts = value.split(",");
+            if (parts.length < 4) return null;
 
-            World world = Bukkit.getWorld(p[0]);
+            World world = Bukkit.getWorld(parts[0]);
             if (world == null) return null;
 
-            float yaw = p.length > 4 ? Float.parseFloat(p[4]) : 0;
-            float pitch = p.length > 5 ? Float.parseFloat(p[5]) : 0;
+            float yaw = parts.length > 4
+                    ? Float.parseFloat(parts[4]) : 0;
+            float pitch = parts.length > 5
+                    ? Float.parseFloat(parts[5]) : 0;
 
             return new Location(
                     world,
-                    Double.parseDouble(p[1]),
-                    Double.parseDouble(p[2]),
-                    Double.parseDouble(p[3]),
+                    Double.parseDouble(parts[1]),
+                    Double.parseDouble(parts[2]),
+                    Double.parseDouble(parts[3]),
                     yaw,
                     pitch
             );
@@ -147,13 +149,13 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         if (value == null || value.isBlank()) return null;
 
         try {
-            String[] p = value.split(",");
-            if (p.length != 3) return null;
+            String[] parts = value.split(",");
+            if (parts.length != 3) return null;
 
             return new int[]{
-                    Integer.parseInt(p[0].trim()),
-                    Integer.parseInt(p[1].trim()),
-                    Integer.parseInt(p[2].trim())
+                    Integer.parseInt(parts[0].trim()),
+                    Integer.parseInt(parts[1].trim()),
+                    Integer.parseInt(parts[2].trim())
             };
         } catch (RuntimeException ex) {
             return null;
@@ -161,7 +163,7 @@ public final class AfterDeath extends JavaPlugin implements Listener {
     }
 
     // --------------------------------------------------
-    // MESSAGES
+    // MESSAGES AND PERMISSIONS
     // --------------------------------------------------
 
     private String color(String text) {
@@ -171,25 +173,19 @@ public final class AfterDeath extends JavaPlugin implements Listener {
     }
 
     private void message(CommandSender sender, String text) {
-        sender.sendMessage(color("&8[&cAfterDeath&8] &r" + text));
-    }
-
-    private void configMessage(CommandSender sender, String key) {
         String prefix = getConfig().getString(
                 "messages.prefix", "&8[&cAfterDeath&8] &r"
         );
-
-        String body = getConfig().getString(
-                "messages." + key, "&c" + key
-        );
-
-        sender.sendMessage(color(prefix + body));
+        sender.sendMessage(color(prefix + text));
     }
 
     private boolean isAdmin(CommandSender sender) {
         if (sender.hasPermission("afterdeath.admin")) return true;
 
-        configMessage(sender, "no-permission");
+        message(sender, getConfig().getString(
+                "messages.no-permission",
+                "&cYou don't have permission to do that."
+        ));
         return false;
     }
 
@@ -218,6 +214,7 @@ public final class AfterDeath extends JavaPlugin implements Listener {
 
     private String boxWorldName() {
         String path = activeBoxPath();
+
         return getConfig().getString(
                 path + ".world",
                 getConfig().getString("ban-box.world", "")
@@ -227,47 +224,53 @@ public final class AfterDeath extends JavaPlugin implements Listener {
     private int[] boxPosition(String key) {
         String path = activeBoxPath();
 
-        int[] result = parsePos(getConfig().getString(path + "." + key));
+        int[] position = parsePos(
+                getConfig().getString(path + "." + key)
+        );
 
-        if (result == null) {
-            result = parsePos(getConfig().getString("ban-box." + key));
+        if (position == null) {
+            position = parsePos(
+                    getConfig().getString("ban-box." + key)
+            );
         }
 
-        return result;
+        return position;
     }
 
     private Location getBoxCenter() {
-        String world = boxWorldName();
+        String worldName = boxWorldName();
         int[] p1 = boxPosition("pos1");
         int[] p2 = boxPosition("pos2");
 
-        if (world == null || world.isBlank() || p1 == null || p2 == null) {
+        if (worldName == null || worldName.isBlank()
+                || p1 == null || p2 == null) {
             return null;
         }
 
-        World w = Bukkit.getWorld(world);
-        if (w == null) return null;
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) return null;
 
         return new Location(
-                w,
-                (Math.min(p1[0], p2[0]) + Math.max(p1[0], p2[0])) / 2.0 + 0.5,
+                world,
+                (Math.min(p1[0], p2[0])
+                        + Math.max(p1[0], p2[0])) / 2.0 + 0.5,
                 Math.max(p1[1], p2[1]) + 1.0,
-                (Math.min(p1[2], p2[2]) + Math.max(p1[2], p2[2])) / 2.0 + 0.5
+                (Math.min(p1[2], p2[2])
+                        + Math.max(p1[2], p2[2])) / 2.0 + 0.5
         );
     }
 
     private boolean isInsideBanBox(Location loc) {
         if (loc == null || loc.getWorld() == null) return false;
 
-        String world = boxWorldName();
-        if (world == null
-                || !loc.getWorld().getName().equalsIgnoreCase(world)) {
+        String worldName = boxWorldName();
+        if (worldName == null
+                || !loc.getWorld().getName().equalsIgnoreCase(worldName)) {
             return false;
         }
 
         int[] p1 = boxPosition("pos1");
         int[] p2 = boxPosition("pos2");
-
         if (p1 == null || p2 == null) return false;
 
         return loc.getBlockX() >= Math.min(p1[0], p2[0])
@@ -278,14 +281,19 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 && loc.getBlockZ() <= Math.max(p1[2], p2[2]);
     }
 
-    private Location getHeadstealSpawn(World world) {
+    private Location getHeadstealSpawn() {
+        World world = Bukkit.getWorld(worldName());
         if (world == null) return null;
 
-        Location loc = deserialize(getConfig().getString("headsteal-spawn"));
+        Location configured = deserialize(
+                getConfig().getString("headsteal-spawn")
+        );
 
-        if (loc != null && loc.getWorld() != null
-                && loc.getWorld().getName().equalsIgnoreCase(world.getName())) {
-            return loc;
+        if (configured != null
+                && configured.getWorld() != null
+                && configured.getWorld().getName()
+                .equalsIgnoreCase(world.getName())) {
+            return configured;
         }
 
         return world.getSpawnLocation();
@@ -315,7 +323,7 @@ public final class AfterDeath extends JavaPlugin implements Listener {
             case "wand" -> {
                 if (!isAdmin(sender)) return true;
                 if (!(sender instanceof Player player)) {
-                    configMessage(sender, "player-only");
+                    message(sender, "&cThis command can only be used in-game.");
                     return true;
                 }
                 giveWand(player);
@@ -324,11 +332,13 @@ public final class AfterDeath extends JavaPlugin implements Listener {
             case "setworld" -> {
                 if (!isAdmin(sender)) return true;
                 if (!(sender instanceof Player player)) {
-                    configMessage(sender, "player-only");
+                    message(sender, "&cThis command can only be used in-game.");
                     return true;
                 }
 
-                getConfig().set("headsteal-world", player.getWorld().getName());
+                getConfig().set(
+                        "headsteal-world", player.getWorld().getName()
+                );
                 saveConfig();
                 message(sender, "&aHeadsteal world set to &e"
                         + player.getWorld().getName());
@@ -337,16 +347,19 @@ public final class AfterDeath extends JavaPlugin implements Listener {
             case "setspawn" -> {
                 if (!isAdmin(sender)) return true;
                 if (!(sender instanceof Player player)) {
-                    configMessage(sender, "player-only");
+                    message(sender, "&cThis command can only be used in-game.");
                     return true;
                 }
 
                 if (!isHeadstealWorld(player.getWorld())) {
-                    message(sender, "&cPehle configured Headsteal world mein jao.");
+                    message(sender,
+                            "&cPehle configured Headsteal world mein jao.");
                     return true;
                 }
 
-                getConfig().set("headsteal-spawn", serialize(player.getLocation()));
+                getConfig().set(
+                        "headsteal-spawn", serialize(player.getLocation())
+                );
                 saveConfig();
                 message(sender, "&aHeadsteal spawn saved.");
             }
@@ -374,23 +387,18 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 }
 
                 eliminated.remove(uuid);
-
+                Location destination = getHeadstealSpawn();
                 Player target = Bukkit.getPlayer(uuid);
-                Location destination = getHeadstealSpawn(
-                        Bukkit.getWorld(worldName())
-                );
 
                 if (target != null) {
                     clearPendingRevive(uuid);
-                    if (destination == null) {
-                        destination = target.getWorld().getSpawnLocation();
-                    }
                     revivePlayer(target, destination);
-                } else if (destination != null) {
+                } else {
                     getConfig().set(
                             "pending-revives." + uuid,
                             serialize(destination)
                     );
+                    saveConfig();
                 }
 
                 saveEliminated();
@@ -444,7 +452,7 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         switch (args[0].toLowerCase()) {
             case "wand" -> {
                 if (!(sender instanceof Player player)) {
-                    configMessage(sender, "player-only");
+                    message(sender, "&cThis command can only be used in-game.");
                     return true;
                 }
                 giveWand(player);
@@ -452,7 +460,7 @@ public final class AfterDeath extends JavaPlugin implements Listener {
 
             case "set" -> {
                 if (!(sender instanceof Player player)) {
-                    configMessage(sender, "player-only");
+                    message(sender, "&cThis command can only be used in-game.");
                     return true;
                 }
                 if (args.length < 2) {
@@ -460,12 +468,17 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                     return true;
                 }
 
-                int[] p1 = parsePos(getConfig().getString("ban-box.pos1"));
-                int[] p2 = parsePos(getConfig().getString("ban-box.pos2"));
+                int[] p1 = parsePos(
+                        getConfig().getString("ban-box.pos1")
+                );
+                int[] p2 = parsePos(
+                        getConfig().getString("ban-box.pos2")
+                );
                 String world = getConfig().getString("ban-box.world", "");
 
                 if (p1 == null || p2 == null || world.isBlank()) {
-                    message(sender, "&cUse /bb wand and select both positions first.");
+                    message(sender,
+                            "&cUse /bb wand and select both positions first.");
                     return true;
                 }
 
@@ -485,7 +498,8 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 getConfig().set("ban-box.name", name);
                 saveConfig();
 
-                message(sender, "&aBan Box &e" + name + " &asaved and activated.");
+                message(sender, "&aBan Box &e" + name
+                        + " &asaved and activated.");
             }
 
             case "delete" -> {
@@ -502,31 +516,37 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                     return true;
                 }
 
+                boolean deletingActive = name.equalsIgnoreCase(
+                        getConfig().getString("ban-box.name", "main")
+                );
+
                 getConfig().set(path, null);
 
-                if (name.equalsIgnoreCase(
-                        getConfig().getString("ban-box.name", "main"))) {
+                if (deletingActive) {
                     getConfig().set("ban-box.name", "main");
+                    getConfig().set("ban-box.world", "");
+                    getConfig().set("ban-box.pos1", null);
+                    getConfig().set("ban-box.pos2", null);
                 }
 
                 saveConfig();
                 message(sender, "&aBan Box deleted.");
             }
 
-            default -> message(sender, "&e/bb wand, set <name>, delete <name>");
+            default -> message(sender,
+                    "&e/bb wand, set <name>, delete <name>");
         }
 
         return true;
     }
 
     // --------------------------------------------------
-    // WAND
+    // WAND SELECTION
     // --------------------------------------------------
 
     private void giveWand(Player player) {
         ItemStack item = new ItemStack(Material.BLAZE_ROD);
         ItemMeta meta = item.getItemMeta();
-
         if (meta == null) return;
 
         meta.setDisplayName(color("&c&lAfterDeath &7| &fBan Box Wand"));
@@ -537,11 +557,12 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         meta.getPersistentDataContainer().set(
                 wandKey, PersistentDataType.BYTE, (byte) 1
         );
-
         item.setItemMeta(meta);
 
         player.getInventory().addItem(item).values().forEach(left ->
-                player.getWorld().dropItemNaturally(player.getLocation(), left)
+                player.getWorld().dropItemNaturally(
+                        player.getLocation(), left
+                )
         );
 
         message(player, "&aBan Box wand received.");
@@ -559,12 +580,9 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         Player player = event.getPlayer();
         if (!player.hasPermission("afterdeath.admin")) return;
 
-        event.setCancelled(true);
-
-        Block block = event.getClickedBlock();
         String action = event.getAction().name();
-
         String key;
+
         if (action.equals("LEFT_CLICK_BLOCK")) {
             key = "pos1";
         } else if (action.equals("RIGHT_CLICK_BLOCK")) {
@@ -573,28 +591,53 @@ public final class AfterDeath extends JavaPlugin implements Listener {
             return;
         }
 
+        event.setCancelled(true);
+
+        Block block = event.getClickedBlock();
+        String oldWorld = getConfig().getString("ban-box.world", "");
+        String newWorld = block.getWorld().getName();
+
+        if (!oldWorld.isBlank()
+                && !oldWorld.equalsIgnoreCase(newWorld)) {
+            getConfig().set("ban-box.pos1", null);
+            getConfig().set("ban-box.pos2", null);
+            message(player,
+                    "&eWorld changed. Select both positions again.");
+        }
+
+        getConfig().set("ban-box.world", newWorld);
         getConfig().set("ban-box." + key,
                 block.getX() + "," + block.getY() + "," + block.getZ());
-        getConfig().set("ban-box.world", block.getWorld().getName());
         saveConfig();
 
         message(player, "&a" + key + " set: &e"
-                + block.getX() + ", " + block.getY() + ", " + block.getZ());
+                + block.getX() + ", "
+                + block.getY() + ", "
+                + block.getZ());
     }
 
     // --------------------------------------------------
-    // PLAYER DEATH AND HEADSTEAL
+    // DEATH AND HEADSTEAL
     // --------------------------------------------------
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player victim = event.getEntity();
 
-        // Only PvP deaths in the configured Headsteal world count.
         if (!isHeadstealWorld(victim.getWorld())) return;
-        if (victim.getKiller() == null) return;
 
         UUID uuid = victim.getUniqueId();
+
+        // Don't eliminate a player twice.
+        if (eliminated.contains(uuid)) return;
+
+        boolean playerKillOnly = getConfig().getBoolean(
+                "head.drop-on-player-kill-only", true
+        );
+
+        Player killer = victim.getKiller();
+        if (playerKillOnly && killer == null) return;
+
         setEliminated(uuid, true);
 
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
@@ -617,24 +660,25 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         event.setKeepInventory(false);
 
         victim.sendMessage(color("&cYou have been eliminated!"));
-        victim.getKiller().sendMessage(color(
-                "&cYou eliminated &e" + victim.getName() + "&c. Their head dropped!"
-        ));
+
+        if (killer != null) {
+            killer.sendMessage(color(
+                    "&cYou eliminated &e" + victim.getName()
+                            + "&c. Their head dropped!"
+            ));
+        }
     }
 
     @EventHandler
     public void onRespawn(PlayerRespawnEvent event) {
-        Player player = event.getPlayer();
-
-        if (!eliminated.contains(player.getUniqueId())) return;
+        if (!eliminated.contains(event.getPlayer().getUniqueId())) return;
 
         Location box = getBoxCenter();
-
         if (box != null) {
             event.setRespawnLocation(box);
         } else {
             getLogger().warning(
-                    "Ban Box is not configured. Set it using /bb wand and /bb set <name>."
+                    "Ban Box is not configured. Use /bb wand and /bb set <name>."
             );
         }
     }
@@ -659,11 +703,9 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         String raw = meta.getPersistentDataContainer().get(
                 headKey, PersistentDataType.STRING
         );
-
         if (raw == null) return;
 
         UUID owner;
-
         try {
             owner = UUID.fromString(raw);
         } catch (IllegalArgumentException ex) {
@@ -680,23 +722,17 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         eliminated.remove(owner);
 
         Player target = Bukkit.getPlayer(owner);
-        Location destination = getHeadstealSpawn(
-                Bukkit.getWorld(worldName())
-        );
+        Location destination = getHeadstealSpawn();
 
         if (target != null) {
             clearPendingRevive(owner);
-
-            if (destination == null) {
-                destination = target.getWorld().getSpawnLocation();
-            }
-
             revivePlayer(target, destination);
-        } else if (destination != null) {
+        } else {
             getConfig().set(
                     "pending-revives." + owner,
                     serialize(destination)
             );
+            saveConfig();
         }
 
         if (item.getAmount() > 1) {
@@ -706,7 +742,6 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         }
 
         saveEliminated();
-
         message(reviver, "&aYou used the head to revive its owner!");
     }
 
@@ -717,6 +752,23 @@ public final class AfterDeath extends JavaPlugin implements Listener {
 
         player.setFireTicks(0);
         player.setFallDistance(0);
+
+        double configuredHealth = getConfig().getDouble(
+                "revival.health", 20.0
+        );
+        double health = Math.max(
+                1.0, Math.min(configuredHealth, player.getMaxHealth())
+        );
+        player.setHealth(health);
+
+        player.setFoodLevel(Math.max(0, Math.min(
+                20, getConfig().getInt("revival.food-level", 20)
+        )));
+
+        int seconds = Math.max(0, getConfig().getInt(
+                "revival.invulnerability-seconds", 3
+        ));
+        player.setNoDamageTicks(seconds * 20);
 
         playRevivalEffects(player);
 
@@ -730,22 +782,24 @@ public final class AfterDeath extends JavaPlugin implements Listener {
     }
 
     private void playRevivalEffects(Player player) {
-        player.getWorld().playSound(
-                player.getLocation(),
-                Sound.ITEM_TOTEM_USE,
-                1.0f,
-                1.0f
-        );
+        if (getConfig().getBoolean("revival.play-sound", true)) {
+            player.getWorld().playSound(
+                    player.getLocation(),
+                    Sound.ITEM_TOTEM_USE,
+                    1.0f,
+                    1.0f
+            );
+        }
 
-        player.getWorld().spawnParticle(
-                Particle.TOTEM_OF_UNDYING,
-                player.getLocation().add(0, 1, 0),
-                100,
-                0.6,
-                0.8,
-                0.6,
-                0.1
-        );
+        if (getConfig().getBoolean("revival.play-particles", true)) {
+            player.getWorld().spawnParticle(
+                    Particle.TOTEM_OF_UNDYING,
+                    player.getLocation().add(0, 1, 0),
+                    100,
+                    0.6, 0.8, 0.6,
+                    0.1
+            );
+        }
     }
 
     // --------------------------------------------------
@@ -765,10 +819,11 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 if (!player.isOnline()) return;
 
                 player.teleport(pending);
-
                 getConfig().set(path, null);
                 saveConfig();
 
+                player.setFireTicks(0);
+                player.setFallDistance(0);
                 playRevivalEffects(player);
                 message(player, "&aYour revival is complete!");
             });
@@ -779,12 +834,12 @@ public final class AfterDeath extends JavaPlugin implements Listener {
                 if (!player.isOnline() || !eliminated.contains(uuid)) return;
 
                 Location box = getBoxCenter();
-
                 if (box != null) {
                     player.teleport(box);
                 }
 
-                message(player, "&cYou are eliminated and remain in the Ban Box.");
+                message(player,
+                        "&cYou are eliminated and remain in the Ban Box.");
             }, 1L);
         }
     }
@@ -796,25 +851,21 @@ public final class AfterDeath extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
+        if (!isEliminated(player) || event.getTo() == null) return;
 
-        if (!isEliminated(player)) return;
-        if (event.getTo() == null) return;
+        Location from = event.getFrom();
+        Location to = event.getTo();
 
-        // Ignore head rotation; check actual position changes.
-        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
-                && event.getFrom().getBlockY() == event.getTo().getBlockY()
-                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
+        // Ignore rotation-only changes.
+        if (from.getBlockX() == to.getBlockX()
+                && from.getBlockY() == to.getBlockY()
+                && from.getBlockZ() == to.getBlockZ()) {
             return;
         }
 
-        if (!isInsideBanBox(event.getTo())) {
+        if (!isInsideBanBox(to)) {
             Location box = getBoxCenter();
-
-            if (box != null) {
-                event.setTo(box);
-            } else {
-                event.setTo(event.getFrom());
-            }
+            event.setTo(box != null ? box : from);
         }
     }
 
@@ -823,10 +874,8 @@ public final class AfterDeath extends JavaPlugin implements Listener {
         if (!isEliminated(event.getPlayer())) return;
 
         Location destination = event.getTo();
-
         if (destination == null || isInsideBanBox(destination)) return;
 
-        // Prevent teleporting outside the Ban Box.
         event.setCancelled(true);
     }
 
