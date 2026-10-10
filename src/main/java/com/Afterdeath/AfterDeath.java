@@ -639,5 +639,13 @@ public final class AfterDeath extends JavaPlugin implements Listener {
             player.getWorld().spawnParticle(
                     Particle.TOTEM_OF_UNDYING,
                     player.getLocation().add(0, 1, 0),
-                    50,
+                     50,
+                    0.5,
+                    0.5,
+                    0.5,
+                    0.1
+            );
+        }
+    }
+}
           
