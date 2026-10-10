@@ -1,58 +1,58 @@
-World where Headsteal mechanics are active.
-
+# World where Headsteal mechanics are active.
 headsteal-world: "Headsteal"
 
-Shared Ban Box region for eliminated players.
-
+# Shared Ban Box region for eliminated players.
 ban-box:
-name: "main"
-world: ""
-pos1: null
-pos2: null
+  name: "main"
+  world: ""
+  pos1: null
+  pos2: null
 
-Optional fallback spawn.
+# Named Ban Boxes.
+ban-boxes: {}
 
+# Optional Headsteal spawn.
 headsteal-spawn: null
 
-Revival settings.
+# Pending revivals for offline players.
+pending-revives: {}
 
+# Revival settings.
 revival:
-health: 20.0
-food-level: 20
-invulnerability-seconds: 3
-play-totem-effect: true
-play-particles: true
-play-sound: true
+  health: 20.0
+  food-level: 20
+  invulnerability-seconds: 3
+  play-totem-effect: true
+  play-particles: true
+  play-sound: true
 
-Head settings.
-
+# Head settings.
 head:
-drop-on-player-kill-only: true
-prevent-duplicate-revival: true
+  drop-on-player-kill-only: true
+  prevent-duplicate-revival: true
 
-Messages.
-
+# Messages.
 messages:
-prefix: "&8[&cAfterDeath&8] &r"
-no-permission: "&cYou don't have permission to do that."
-player-only: "&cThis command can only be used in-game."
-world-set: "&aHeadsteal world set to &e%world%&a."
-pos1: "&aBan Box Position 1: &e%x%, %y%, %z%"
-pos2: "&aBan Box Position 2: &e%x%, %y%, %z%"
-box-incomplete: "&cBan Box is not configured. Use /bb wand."
-box-world-mismatch: "&cBoth positions must be in the same world."
-spawn-set: "&aHeadsteal spawn saved."
-wand-given: "&aBan Box wand received."
-eliminated: "&cYou have been eliminated! Your head is required for revival."
-head-dropped: "&e%player%'s head has dropped!"
-revived: "&a%player% has been revived."
-revived-by-head: "&aYou have been revived!"
-not-eliminated: "&cThat player is not eliminated."
-status-eliminated: "&c%player% is eliminated."
-status-alive: "&a%player% is not eliminated."
-reload: "&aConfiguration reloaded."
-usage: "&eUse /afterdeath <setworld|setspawn|reload|revive <player>|status <player>>"
-banbox-set: "&aBan Box '&e%name%&a' configured."
-banbox-deleted: "&aBan Box '&e%name%&a' deleted."
-banbox-not-found: "&cThat Ban Box name was not found."
-locked: "&cYou are eliminated! You cannot do that until revived."
+  prefix: "&8[&cAfterDeath&8] &r"
+  no-permission: "&cYou don't have permission to do that."
+  player-only: "&cThis command can only be used in-game."
+  world-set: "&aHeadsteal world set to &e%world%&a."
+  pos1: "&aBan Box Position 1: &e%x%, %y%, %z%"
+  pos2: "&aBan Box Position 2: &e%x%, %y%, %z%"
+  box-incomplete: "&cBan Box is not configured. Use /bb wand."
+  box-world-mismatch: "&cBoth positions must be in the same world."
+  spawn-set: "&aHeadsteal spawn saved."
+  wand-given: "&aBan Box wand received."
+  eliminated: "&cYou have been eliminated! Your head is required for revival."
+  head-dropped: "&e%player%'s head has dropped!"
+  revived: "&a%player% has been revived."
+  revived-by-head: "&aYou have been revived!"
+  not-eliminated: "&cThat player is not eliminated."
+  status-eliminated: "&c%player% is eliminated."
+  status-alive: "&a%player% is not eliminated."
+  reload: "&aConfiguration reloaded."
+  usage: "&eUse /afterdeath <setworld|setspawn|reload|revive <player>|status <player>>"
+  banbox-set: "&aBan Box '&e%name%&a' configured."
+  banbox-deleted: "&aBan Box '&e%name%&a' deleted."
+  banbox-not-found: "&cThat Ban Box name was not found."
+  locked: "&cYou are eliminated! You cannot do that until revived."
