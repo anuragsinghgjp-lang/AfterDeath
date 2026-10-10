@@ -6,20 +6,20 @@ author: AfterDeath
 description: Headsteal, player revival and Ban Box plugin with Multiverse support.
 
 commands:
-afterdeath:
-description: Main AfterDeath command.
-usage: /afterdeath <wand|setworld|setspawn|reload|revive|status>
-aliases: [ad]
+  afterdeath:
+    description: Main AfterDeath command.
+    usage: /afterdeath <wand|setworld|setspawn|reload|revive|status>
+    aliases: [ad]
 
-bb:
-description: Ban Box management commands.
-usage: /bb <wand|set <name>|delete <name>>
+  bb:
+    description: Ban Box management commands.
+    usage: /bb <wand|set <name>|delete <name>>
 
 permissions:
-afterdeath.admin:
-description: Allows configuring AfterDeath and using admin commands.
-default: op
+  afterdeath.admin:
+    description: Allows configuring AfterDeath and using admin commands.
+    default: op
 
-afterdeath.bypass:
-description: Bypasses AfterDeath elimination restrictions.
-default: false
+  afterdeath.bypass:
+    description: Bypasses AfterDeath elimination restrictions.
+    default: false
